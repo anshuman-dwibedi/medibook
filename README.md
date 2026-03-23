@@ -221,7 +221,7 @@ medibook/
 
 This project depends on the **DevCore shared library** (`./core/`).
 
-> [DevCore on GitHub â†’](https://github.com/your-org/devcore) *(update with actual URL)*
+> [DevCore on GitHub](https://github.com/anshuman-dwibedi/devcore-shared)
 
 **Classes used:**
 - `Database` â€” Singleton PDO wrapper
