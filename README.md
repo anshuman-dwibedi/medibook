@@ -1,10 +1,10 @@
-﻿# MediBook - Clinic Appointment Booking System
+# MediBook - Clinic Appointment Booking System
 
 A complete clinic appointment management system with doctor profiles, real-time slot availability, QR check-in, appointment scheduling, and analytics. Perfect for multi-doctor clinics and healthcare centers.
 
 Built on the DevCore Shared Library with secure patient data handling and staff workflows.
 
-**Part of the DevCore Suite** â€” a collection of business-ready web applications sharing a common core library.
+**Part of the DevCore Suite** — a collection of business-ready web applications sharing a common core library.
 
 ---
 
@@ -43,35 +43,35 @@ Built on the DevCore Shared Library with secure patient data handling and staff 
 
 ```
 medibook/
-â”œâ”€â”€ index.php                   Public appointment booking page
-â”œâ”€â”€ appointment.php             View appointment details
-â”œâ”€â”€ book.php                    Appointment booking form
-â”œâ”€â”€ cancel.php                  Appointment cancellation
-â”œâ”€â”€ confirmation.php            Booking confirmation + QR card
-â”œâ”€â”€ config.example.php          Configuration template
-â”œâ”€â”€ database.sql                Schema + sample doctors and slots
-â”œâ”€â”€ .env.example                Environment variables
-â”‚
-â”œâ”€â”€ api/
-â”‚   â”œâ”€â”€ doctors.php             GET list/single, POST create, PUT update, DELETE (admin)
-â”‚   â”œâ”€â”€ slots.php               GET available, POST create, PUT update, DELETE (admin)
-â”‚   â”œâ”€â”€ appointments.php        POST book, GET list/view, PUT update, DELETE cancel
-â”‚   â”œâ”€â”€ live.php                GET real-time slot availability (public polling)
-â”‚   â””â”€â”€ analytics.php           GET dashboard stats (admin only)
-â”‚
-â”œâ”€â”€ admin/
-â”‚   â”œâ”€â”€ login.php               Staff authentication
-â”‚   â”œâ”€â”€ dashboard.php           Analytics + appointment feed
-â”‚   â”œâ”€â”€ doctors.php             Doctor management (add/edit/delete)
-â”‚   â”œâ”€â”€ slots.php               Schedule management for doctors
-â”‚   â”œâ”€â”€ appointments.php        View/manage all appointments
-â”‚   â”œâ”€â”€ qr-scanner.php          Check-in via QR code scanner
-â”‚   â””â”€â”€ logout.php              Session logout
-â”‚
-â””â”€â”€ core/                       DevCore shared library (git submodule)
-    â”œâ”€â”€ bootstrap.php           Autoloader + config loader
-    â”œâ”€â”€ backend/                PHP classes (Database, Api, Auth, etc.)
-    â””â”€â”€ ui/                     CSS framework + JavaScript utilities
+├── index.php                   Public appointment booking page
+├── appointment.php             View appointment details
+├── book.php                    Appointment booking form
+├── cancel.php                  Appointment cancellation
+├── confirmation.php            Booking confirmation + QR card
+├── config.example.php          Configuration template
+├── database.sql                Schema + sample doctors and slots
+├── .env.example                Environment variables
+│
+├── api/
+│   ├── doctors.php             GET list/single, POST create, PUT update, DELETE (admin)
+│   ├── slots.php               GET available, POST create, PUT update, DELETE (admin)
+│   ├── appointments.php        POST book, GET list/view, PUT update, DELETE cancel
+│   ├── live.php                GET real-time slot availability (public polling)
+│   └── analytics.php           GET dashboard stats (admin only)
+│
+├── admin/
+│   ├── login.php               Staff authentication
+│   ├── dashboard.php           Analytics + appointment feed
+│   ├── doctors.php             Doctor management (add/edit/delete)
+│   ├── slots.php               Schedule management for doctors
+│   ├── appointments.php        View/manage all appointments
+│   ├── qr-scanner.php          Check-in via QR code scanner
+│   └── logout.php              Session logout
+│
+└── core/                       DevCore shared library (git submodule)
+    ├── bootstrap.php           Autoloader + config loader
+    ├── backend/                PHP classes (Database, Api, Auth, etc.)
+    └── ui/                     CSS framework + JavaScript utilities
 ```
 
 ---
@@ -160,8 +160,8 @@ Sample doctors in database:
 
 ### Appointment Booking Flow
 
-1. Patient visits homepage â†’ sees list of doctors
-2. Selects doctor and available date â†’ sees time slots via `/api/slots.php`
+1. Patient visits homepage → sees list of doctors
+2. Selects doctor and available date → sees time slots via `/api/slots.php`
 3. Selects available slot and applies discount code if available
 4. Fills in patient details (name, email, phone, symptoms)
 5. `POST /api/appointments.php` creates booking with slot locked
@@ -305,9 +305,8 @@ Create `.env` or configure in config.php:
 
 ## License
 
-MIT License â€” see LICENSE file.
+MIT License — see LICENSE file.
 
 ---
 
 **Questions?** Visit [DevCore Shared Library](https://github.com/anshuman-dwibedi/devcore-shared) repository.
-
