@@ -441,6 +441,28 @@ function updateSelDocCard() {
 
 document.getElementById('appt-date').addEventListener('change', function() {
   const selectedDate = this.value;
+  if (!selectedDate) {
+    booking.date = null;
+    booking.time = null;
+    document.getElementById('btn-next-2').disabled = true;
+    document.getElementById('slots-container').innerHTML =
+      '<p class="dc-body" style="color:var(--dc-text-3)">Select a date above to see available slots.</p>';
+    restartSlotPoller();
+    return;
+  }
+
+  // Some browsers fire intermediate change states while typing in date fields.
+  // Wait until a full YYYY-MM-DD value is present before validating/showing warnings.
+  if (selectedDate.length < 10) {
+    booking.date = null;
+    booking.time = null;
+    document.getElementById('btn-next-2').disabled = true;
+    document.getElementById('slots-container').innerHTML =
+      '<p class="dc-body" style="color:var(--dc-text-3)">Finish entering the full date to load slots.</p>';
+    restartSlotPoller();
+    return;
+  }
+
   if (!isWithinBookingWindow(selectedDate)) {
     booking.date = null;
     booking.time = null;
@@ -448,6 +470,7 @@ document.getElementById('appt-date').addEventListener('change', function() {
     document.getElementById('btn-next-2').disabled = true;
     document.getElementById('slots-container').innerHTML =
       '<p class="dc-body" style="color:var(--dc-text-3)">Please choose a valid date between today and the next 180 days.</p>';
+    // Warn only after full invalid date is committed.
     Toast.warning('Please choose a valid appointment date.');
     restartSlotPoller();
     return;
