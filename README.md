@@ -1,271 +1,313 @@
-﻿# ðŸ¥ MediBook â€” Medical Clinic Appointment Booking System
+﻿# MediBook - Clinic Appointment Booking System
 
-> A production-ready medical clinic booking system with real-time slot locking, QR appointment cards, and clinic analytics.
+A complete clinic appointment management system with doctor profiles, real-time slot availability, QR check-in, appointment scheduling, and analytics. Perfect for multi-doctor clinics and healthcare centers.
 
-Part of the **DevCore Portfolio Suite** â€” 4 industry-specific projects, 1 shared core library.
+Built on the DevCore Shared Library with secure patient data handling and staff workflows.
+
+**Part of the DevCore Suite** â€” a collection of business-ready web applications sharing a common core library.
 
 ---
 
-## âœ¨ Features
+## Features
 
 | Feature | Description |
-|---|---|
-| âš¡ **Real-Time Slot Locking** | Slots update live across all browser sessions via `LivePoller`. No double bookings ever. |
-| ðŸ“± **QR Appointment Cards** | Auto-generated QR code links to public appointment page. Printable medical card format. |
-| ðŸ§™ **3-Step Booking Wizard** | Single-page wizard: Choose Doctor â†’ Pick Slot â†’ Enter Details. No page reloads. |
-| ðŸ“Š **Analytics Dashboard** | KPIs, line chart, bar chart, doughnut chart, live today feed â€” all powered by `Analytics` class. |
-| âš ï¸ **No-Show Detection** | Appointments past 30+ minutes with status `confirmed` are flagged as "Possible No-Show". |
-| ðŸ‘¨â€âš•ï¸ **Doctor Management** | Add, edit, deactivate doctors with photo upload via pluggable storage driver. |
-| ðŸ—‚ï¸ **Weekly Slot Grid** | Visual Monâ€“Fri grid to toggle time slots on/off per doctor. |
-| ðŸ” **QR Scanner (Reception)** | Receptionist pastes token or token is scanned â†’ full appointment pulled up instantly. |
-| ðŸ”’ **Secure Token System** | Each appointment gets a unique 16-char hex token via `bin2hex(random_bytes(8))`. |
-| ðŸ—ƒï¸ **Status Lifecycle** | `booked â†’ confirmed â†’ in_progress â†’ completed / cancelled / no_show` |
+|---------|-------------|
+| Doctor Profiles | Directory of doctors with specialties, departments, profiles, availability |
+| Appointment Booking | Patients book appointments for available doctors and time slots |
+| Real-Time Slot Availability | Slot availability updates every 4 seconds showing booked vs available times |
+| Slot Locking | Prevent double-booking with transaction-based slot locking on confirm |
+| Appointment Confirmation | Email/SMS confirmation with unique appointment code and details |
+| Appointment Cancellation | Patients can cancel appointments, returning slots to available pool |
+| QR Check-In System | Staff scan patient QR codes at reception for automated check-in |
+| No-Show Detection | System tracks no-shows for analytics and patient follow-up |
+| Analytics Dashboard | Appointment metrics, doctor performance, completion rates, daily trends |
+| Admin Management Panel | Doctors, appointment slots, patient records behind secure auth |
 
 ---
 
-## ðŸ›  Tech Stack
+## Tech Stack
 
-- **Backend:** PHP 8.1+ Â· PDO MySQL
-- **Frontend:** Vanilla JS Â· Devcore UI Design System
-- **Charts:** Chart.js 4 via `DCChart` wrapper
-- **QR Codes:** goqr.me API via `QrCode::url()`
-- **Storage:** Pluggable â€” Local filesystem, AWS S3, or Cloudflare R2
-- **Auth:** Session-based via `Auth` class
-- **Shared Library:** DevCore (`Database`, `Api`, `Analytics`, `Auth`, `Validator`, `Storage`, `QrCode`)
-
----
-
-## ðŸš€ Setup Instructions
-
-### 1. Folder Structure
-
-Place the project inside your DevCore portfolio root:
-
-```
-your-portfolio/
-â”œâ”€â”€ config.php                    â† Main config (copy from config.example.php)
-â”œâ”€â”€ core/                         â† DevCore shared library
-â”‚   â”œâ”€â”€ bootstrap.php
-â”‚   â”œâ”€â”€ backend/
-â”‚   â””â”€â”€ ui/
-â””â”€â”€ medibook/       â† This project
-    â”œâ”€â”€ index.php
-    â”œâ”€â”€ book.php
-    â”œâ”€â”€ ...
-```
-
-### 2. Configure
-
-```bash
-cp medibook/config.example.php config.php
-```
-
-Edit `config.php`:
-```php
-'db_host' => 'localhost',
-'db_name' => 'medibook',
-'db_user' => 'root',
-'db_pass' => 'your_password',
-'app_url' => 'http://localhost/medibook',
-```
-
-### 3. Create Database & Import Schema
-
-```bash
-mysql -u root -p -e "CREATE DATABASE medibook CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-mysql -u root -p medibook < medibook/database.sql
-```
-
-### 4. Create Upload Directory (for Local Storage)
-
-```bash
-mkdir -p medibook/uploads/doctors
-chmod 755 medibook/uploads
-```
-
-### 5. Open in Browser
-
-```
-http://localhost/medibook/index.php         â†’ Public homepage
-http://localhost/medibook/book.php â†’ Booking wizard
-http://localhost/medibook/admin/dashboard.php â†’  â†’ Admin panel
-```
-
-**Admin Login:**
-- Email: `admin@clinic.com`
-- Password: `admin123`
+| Layer | Technology |
+|-------|-----------|
+| Backend | PHP 8.1+ with DevCore framework |
+| Database | MySQL 8 / MariaDB 10.6+ |
+| Frontend | Vanilla JavaScript ES2022 + DevCore UI library |
+| Charts | Chart.js via DevCore wrapper |
+| QR Codes | qrserver.com API for check-in cards |
+| Sessions | PHP native sessions for user auth |
+| Shared Core | DevCore Shared Library (git submodule at ./core/) |
 
 ---
 
-## âš¡ How Real-Time Slot Locking Works
-
-**The problem:** If two patients are on `book.php` at the same time, viewing the same doctor and date, and the last available slot is taken by Patient A â€” Patient B should see it grey out immediately, not discover the conflict only after submitting.
-
-**The solution â€” `LivePoller` + `/api/live.php`:**
-
-1. When a patient reaches Step 2 (Date & Slot), a `LivePoller` starts polling `/api/live.php?doctor=X&date=Y` every **5 seconds**.
-2. The API returns the current `booked` count and `max` capacity for each slot.
-3. The JS `renderSlots()` function compares live data against the displayed slot buttons and:
-   - Updates "3 left" / "Last slot!" / "Full" labels dynamically
-   - Disables fully booked slots without page reload
-   - If the currently-selected slot becomes full, it clears the selection and shows a warning Toast
-4. When a booking is submitted, the server performs a **final atomic check** (`SELECT COUNT(*) ... FOR UPDATE` semantics via PDO) before inserting â€” preventing race conditions even if two submissions arrive simultaneously.
-
-**Why it matters:** Without live locking, a clinic can overbook slots. A patient shows up and finds no appointment on record â€” damaging trust. This system makes overbooking practically impossible.
-
----
-
-## ðŸ“± How the QR Appointment Card Works
-
-**Patient flow:**
-
-```
-1. Patient visits book.php and completes the 3-step wizard
-   â†“
-2. POST /api/appointments.php â€” server generates token = bin2hex(random_bytes(8))
-   â†“
-3. Patient is redirected to confirmation.php?token=TOKEN
-   â†“
-4. confirmation.php renders a printable QR card using QrCode::url()
-   The QR encodes: https://yourclinic.com/appointment.php?token=TOKEN
-   â†“
-5. Patient screenshots, prints, or shows QR on phone at reception
-   â†“
-6. Receptionist opens admin/qr-scanner.php and pastes the token
-   (or scans QR with any QR reader â†’ opens appointment.php â†’ shows token)
-   â†“
-7. Full appointment details appear with status update buttons
-   Receptionist clicks "In Progress" â†’ "Completed" as visit progresses
-```
-
-**QR Card contents:** Clinic name Â· Doctor name Â· Department Â· Date Â· Time Â· Patient name Â· Token
-
-**Print support:** The "Print Appointment Card" button opens a clean print-optimized popup containing only the card â€” no navigation, no dark background.
-
----
-
-## âš ï¸ How No-Show Detection Works
-
-The system doesn't send SMS/email reminders (that would require a mail provider), but it flags potential no-shows in the live dashboard:
-
-1. `admin/dashboard.php` polls `/api/analytics.php` every 30 seconds
-2. The analytics endpoint queries today's appointments and checks:
-   ```sql
-   WHERE status = 'confirmed'
-   AND CONCAT(appointment_date, ' ', appointment_time) < NOW() - INTERVAL 30 MINUTE
-   ```
-3. Any such appointment has `possible_no_show: true` in the response
-4. The live feed renders these rows with a `âš ï¸ Possible No-Show` warning badge
-5. The receptionist can then manually update the status to `no_show`
-
-**No-Show Rate KPI** = `no_show_count / total_appointments * 100` â€” shown on the dashboard stat card.
-
----
-
-## ðŸ—ƒï¸ Doctor Photo Storage
-
-Doctor photos are stored via the **pluggable DevCore Storage driver**. To change provider, edit a single line in `config.php`:
-
-```php
-'storage' => [
-    'driver' => 'local',   // â† change to 's3' or 'r2'
-    ...
-]
-```
-
-| Driver | Description |
-|---|---|
-| `local` | Files saved to `/uploads/doctors/` in the project root. Zero config. |
-| `s3` | AWS S3. Add `key`, `secret`, `bucket`, `region` to config. |
-| `r2` | Cloudflare R2. Add `account_id`, `key`, `secret`, `bucket`, `base_url`. |
-
-**Usage in code:**
-```php
-$photoUrl = Storage::uploadFile($_FILES['photo'], 'doctors');
-```
-
-The returned URL is stored in `doctors.photo_url` and served directly in all views. Switching providers requires only changing the config â€” no code changes.
-
----
-
-## ðŸ“ Project Structure
+## Project Structure
 
 ```
 medibook/
-â”œâ”€â”€ index.php               Public homepage â€” departments, CTAs
-â”œâ”€â”€ book.php                3-step booking wizard
-â”œâ”€â”€ confirmation.php        Booking confirmed + QR card
-â”œâ”€â”€ appointment.php         Public appointment lookup + status timeline
-â”œâ”€â”€ cancel.php              Cancel via token
-â”œâ”€â”€ config.example.php      Config template
-â”œâ”€â”€ database.sql            Full schema + 60 sample appointments
+â”œâ”€â”€ index.php                   Public appointment booking page
+â”œâ”€â”€ appointment.php             View appointment details
+â”œâ”€â”€ book.php                    Appointment booking form
+â”œâ”€â”€ cancel.php                  Appointment cancellation
+â”œâ”€â”€ confirmation.php            Booking confirmation + QR card
+â”œâ”€â”€ config.example.php          Configuration template
+â”œâ”€â”€ database.sql                Schema + sample doctors and slots
+â”œâ”€â”€ .env.example                Environment variables
+â”‚
 â”œâ”€â”€ api/
-â”‚   â”œâ”€â”€ doctors.php         CRUD for doctors
-â”‚   â”œâ”€â”€ slots.php           Slot availability + CRUD
-â”‚   â”œâ”€â”€ appointments.php    Book, view, update status
-â”‚   â”œâ”€â”€ analytics.php       Dashboard KPIs + chart data
-â”‚   â””â”€â”€ live.php            Real-time slot availability (polled every 5s)
-â””â”€â”€ admin/
-    â”œâ”€â”€ login.php           Admin authentication
-    â”œâ”€â”€ dashboard.php       Analytics dashboard
-    â”œâ”€â”€ appointments.php    Appointment management table
-    â”œâ”€â”€ doctors.php         Doctor CRUD with photo upload
-    â”œâ”€â”€ slots.php           Weekly schedule grid editor
-    â”œâ”€â”€ qr-scanner.php      Reception QR token lookup
-    â””â”€â”€ logout.php          Session logout
+â”‚   â”œâ”€â”€ doctors.php             GET list/single, POST create, PUT update, DELETE (admin)
+â”‚   â”œâ”€â”€ slots.php               GET available, POST create, PUT update, DELETE (admin)
+â”‚   â”œâ”€â”€ appointments.php        POST book, GET list/view, PUT update, DELETE cancel
+â”‚   â”œâ”€â”€ live.php                GET real-time slot availability (public polling)
+â”‚   â””â”€â”€ analytics.php           GET dashboard stats (admin only)
+â”‚
+â”œâ”€â”€ admin/
+â”‚   â”œâ”€â”€ login.php               Staff authentication
+â”‚   â”œâ”€â”€ dashboard.php           Analytics + appointment feed
+â”‚   â”œâ”€â”€ doctors.php             Doctor management (add/edit/delete)
+â”‚   â”œâ”€â”€ slots.php               Schedule management for doctors
+â”‚   â”œâ”€â”€ appointments.php        View/manage all appointments
+â”‚   â”œâ”€â”€ qr-scanner.php          Check-in via QR code scanner
+â”‚   â””â”€â”€ logout.php              Session logout
+â”‚
+â””â”€â”€ core/                       DevCore shared library (git submodule)
+    â”œâ”€â”€ bootstrap.php           Autoloader + config loader
+    â”œâ”€â”€ backend/                PHP classes (Database, Api, Auth, etc.)
+    â””â”€â”€ ui/                     CSS framework + JavaScript utilities
 ```
 
 ---
 
-## ðŸ”— DevCore Shared Library
+## Setup Instructions
 
-This project depends on the **DevCore shared library** (`./core/`).
+### 1. Clone DevCore Shared Library
 
-> [DevCore on GitHub](https://github.com/anshuman-dwibedi/devcore-shared)
+```bash
+git clone https://github.com/anshuman-dwibedi/devcore-shared.git core
+```
 
-**Classes used:**
-- `Database` â€” Singleton PDO wrapper
-- `Api` â€” Standardized JSON responses
-- `Auth` â€” Session-based authentication
-- `Analytics` â€” Reusable clinic analytics queries
-- `QrCode` â€” QR code generation via goqr.me
-- `Validator` â€” Input validation
-- `Storage` â€” Pluggable file storage (Local / S3 / R2)
+Or using submodule:
+```bash
+git clone --recursive https://github.com/anshuman-dwibedi/medibook.git
+```
 
-**UI System:**
-- `devcore.css` â€” Dark design system (dc-card, dc-btn, dc-badge, dc-stat, dc-table, dc-sidebarâ€¦)
-- `devcore.js` â€” `DC.get/post`, `Toast`, `Modal`, `LivePoller`, `DCChart`, `DCForm`
+### 2. Create Database
+
+```bash
+mysql -u root -p -e "CREATE DATABASE medibook CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+mysql -u root -p medibook < database.sql
+```
+
+Database includes sample doctors and appointment slots.
+
+### 3. Configure Application
+
+```bash
+cp config.example.php config.php
+```
+
+Edit `config.php`:
+
+```php
+return [
+    'db_host'    => 'localhost',
+    'db_name'    => 'medibook',
+    'db_user'    => 'root',
+    'db_pass'    => 'your_password',
+    'app_name'   => 'MediBook Clinic',
+    'app_url'    => 'http://localhost/medibook',
+    'debug'      => true,  // set false in production
+    'api_secret' => 'your-secure-random-string',
+];
+```
+
+### 4. Start Web Server
+
+Using PHP built-in server:
+```bash
+php -S localhost:8000
+```
+
+Or configure Apache/Nginx to point to project root.
+
+### 5. Access Application
+
+- **Patient Booking:** http://localhost:8000/medibook/index.php
+- **Admin Panel:** http://localhost:8000/medibook/admin/login.php
+
+**Default Admin Credentials:**
+```
+Email: admin@clinic.com
+Password: admin123
+```
+
+> Change immediately in production.
 
 ---
 
-## ðŸ§ª Sample Data
+## Configuration
 
-The `database.sql` includes:
-- **6 departments** with icons
-- **12 doctors** (2 per dept) with realistic bios, 5â€“22 years experience, $50â€“$250 fees
-- **180 weekly slots** (Monâ€“Fri, 3 times/day per doctor, max 3 patients)
-- **60+ appointments** over 30 past + 7 future days, mixed statuses
-- **10+ appointments today** for live dashboard demo
-- **1 admin account** â€” `admin@clinic.com` / `admin123`
+### config.example.php
 
----
+Database credentials, app URL, and other settings. Copy to `config.php` and customize.
 
-## ðŸ—ï¸ Part of the DevCore Portfolio Suite
-
-> **DevCore Portfolio Suite** â€” 4 industry-specific projects, 1 shared core library.
-
-| Project | Description |
-|---|---|
-| ðŸ¥ **MediBook** (this) | Medical clinic appointment booking |
-| ðŸ½ï¸ **RestroDesk** | Restaurant table booking & menu management |
-| ðŸ  **Estatecore** | Real estate property listings & inquiries |
-| ðŸ“¦ **Livestore** | A full-featured e-commerce store with live inventory, real-time stock counters, and QR order receipts |
-
-All projects share the same `core/` library â€” one codebase, four industries.
+Sample doctors in database:
+- Dr. Sharma (Cardiology, 3 slots available)
+- Dr. Patel (General Medicine, 5 slots available)
+- Dr. Verma (Orthopedics, 4 slots available)
 
 ---
 
-## ðŸ“„ License
+## How It Works
 
-MIT License â€” free for personal and commercial use.
+### Appointment Booking Flow
+
+1. Patient visits homepage â†’ sees list of doctors
+2. Selects doctor and available date â†’ sees time slots via `/api/slots.php`
+3. Selects available slot and applies discount code if available
+4. Fills in patient details (name, email, phone, symptoms)
+5. `POST /api/appointments.php` creates booking with slot locked
+6. Confirmation page displays appointment code and printable QR card
+7. Staff scans QR at reception for check-in on appointment day
+
+**Slot Locking Mechanism:**
+```php
+// Prevent double-booking via transaction
+BEGIN;
+SELECT slot FROM doctor_slots WHERE id=X FOR UPDATE;  // Lock row
+IF (slot > 0) {
+    UPDATE doctor_slots SET slot = slot - 1 WHERE id=X;
+    INSERT INTO appointments (...);
+}
+COMMIT;
+```
+
+### Real-Time Availability Polling
+
+Every **4 seconds**, `/api/live.php` returns available slots per doctor:
+
+```javascript
+const poller = new LivePoller('api/live.php', (res) => {
+  res.doctors.forEach(doc => {
+    // Update slot availability UI in real-time
+  });
+}, 4000);
+```
+
+### QR Check-In System
+
+1. Patient arrives for appointment
+2. Staff opens Qr-Scanner (`/admin/qr-scanner.php`) on tablet
+3. Staff scans patient's appointment QR code
+4. System updates appointment status to "checked-in"
+5. Doctor is notified patient is ready
+6. Appointment timer starts
+
+### No-Show Tracking
+
+System automatically markers appointment as "no-show" if:
+- Patient doesn't check in within 15-minute grace period after appointment time
+- Staff manually marks as no-show via dashboard
+
+No-show data feeds into analytics for patient follow-up workflows.
+
+### Analytics Dashboard
+
+Dashboard metrics:
+- Appointments today, this month, total
+- Doctor performance (appointments, completion rate, average feedback)
+- Sector performance comparison
+- Daily appointment trend chart
+- Live appointment feed
+- Patient feedback summary
+
+---
+
+## API Endpoints
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | /api/doctors.php | No | List all doctors with specialties |
+| GET | /api/doctors.php?id=X | No | Get doctor details and schedule |
+| POST | /api/doctors.php | Admin | Create new doctor |
+| PUT | /api/doctors.php?id=X | Admin | Update doctor profile |
+| DELETE | /api/doctors.php?id=X | Admin | Delete doctor (soft delete) |
+| GET | /api/slots.php?doctor=X&date=Y | No | Get available slots for doctor on date |
+| POST | /api/slots.php | Admin | Create appointment slot for doctor |
+| PUT | /api/slots.php?id=X | Admin | Update slot details |
+| DELETE | /api/slots.php?id=X | Admin | Delete slot |
+| POST | /api/appointments.php | No | Book new appointment |
+| GET | /api/appointments.php | No/Admin | List appointments (patient lookup or admin view) |
+| GET | /api/appointments.php?id=X | No | Get appointment details |
+| PUT | /api/appointments.php?id=X | Admin | Update appointment status (checked-in, completed, no-show, etc.) |
+| DELETE | /api/appointments.php?id=X | Admin | Cancel appointment (refund, reschedule slots) |
+| GET | /api/live.php | No | Real-time slot availability per doctor (polling) |
+| GET | /api/analytics.php | Admin | Dashboard statistics, charts, performance metrics |
+
+---
+
+## Troubleshooting
+
+**Database not found**
+- Create: `mysql -u root -p -e "CREATE DATABASE medibook;"`
+- Import: `mysql -u root -p medibook < database.sql`
+- Verify database name in config.php
+
+**"Cannot include core/bootstrap.php"**
+- Clone: `git clone https://github.com/anshuman-dwibedi/devcore-shared.git core`
+- Or: `git submodule update --init`
+
+**Slots not showing in real-time**
+- Check browser console for JS errors
+- Verify `/api/live.php?doctor=X&date=Y` returns JSON
+- Ensure polling interval not too aggressive
+
+**Double-booking occurring**
+- Verify database transactions enabled: `SHOW VARIABLES LIKE 'innodb_support_xa';`
+- Check slot locking in `/api/appointments.php` line ~80
+- Ensure appointment creation wrapped in transaction
+
+**QR codes not generating**
+- QR uses qrserver.com API (requires internet access)
+- Verify `QrCode::url()` called correctly in confirmation.php
+- Test: Visit http://api.qrserver.com/v1/create-qr-code/?size=200x200&data=test
+
+**Admin login not working**
+- Verify users table populated: `SELECT COUNT(*) FROM users;`
+- Reset password: `UPDATE users SET password = '$2y$10$...' WHERE email = 'admin@clinic.com';`
+- Check PHP sessions enabled in php.ini
+
+**No-show dates incorrect**
+- Verify server time matches actual time: `date`
+- Check database timezone: `SELECT @@global.time_zone, @@session.time_zone;`
+- Grace period is configurable in api/appointments.php (default: 15 minutes)
+
+---
+
+## Environment Variables
+
+Create `.env` or configure in config.php:
+
+| Variable | Purpose |
+|----------|---------|
+| DB_HOST | MySQL hostname |
+| DB_NAME | Database name |
+| DB_USER | Database username |
+| DB_PASS | Database password |
+| APP_NAME | Clinic name in UI |
+| APP_URL | Public base URL |
+| DEBUG | Debug mode (true/false) |
+| API_SECRET | API bearer token secret |
+| APPOINTMENT_GRACE_PERIOD | No-show grace period in minutes (default: 15) |
+| SMS_ENABLED | Enable SMS confirmations (true/false) |
+| SMS_GATEWAY | SMS provider (Twilio, etc.) |
+| EMAIL_FROM | Sender email for confirmations |
+
+---
+
+## License
+
+MIT License â€” see LICENSE file.
+
+---
+
+**Questions?** Visit [DevCore Shared Library](https://github.com/anshuman-dwibedi/devcore-shared) repository.
 
