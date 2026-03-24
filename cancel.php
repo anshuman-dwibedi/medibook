@@ -1,5 +1,5 @@
 <?php
-require_once '../../core/bootstrap.php';
+require_once __DIR__ . '/core/bootstrap.php';
 
 $token   = preg_replace('/[^a-zA-Z0-9]/', '', $_GET['token'] ?? '');
 $success = false;

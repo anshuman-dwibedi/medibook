@@ -1,5 +1,5 @@
 <?php
-require_once '../../core/bootstrap.php';
+require_once __DIR__ . '/core/bootstrap.php';
 
 $db      = Database::getInstance();
 $deptId  = isset($_GET['dept']) ? (int)$_GET['dept'] : null;

@@ -1,5 +1,5 @@
 <?php
-require_once dirname(__DIR__, 3) . '/core/bootstrap.php';
+require_once dirname(__DIR__) . '/core/bootstrap.php';
 Auth::requireRole('admin', 'login.php');
 $apiBase = rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'] ?? '/admin/qr-scanner.php')), '/') . '/api';
 ?>

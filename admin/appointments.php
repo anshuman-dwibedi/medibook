@@ -1,5 +1,5 @@
 <?php
-require_once dirname(__DIR__, 3) . '/core/bootstrap.php';
+require_once dirname(__DIR__) . '/core/bootstrap.php';
 Auth::requireRole('admin', 'login.php');
 $db      = Database::getInstance();
 $doctors = $db->fetchAll("SELECT id, name FROM doctors WHERE active = 1 ORDER BY name");
