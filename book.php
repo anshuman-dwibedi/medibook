@@ -195,10 +195,12 @@ $maxBookDate = date('Y-m-d', strtotime('+180 days'));
       <div class="dc-flex-between dc-mb" style="flex-wrap:wrap;gap:12px">
         <div>
           <div class="dc-label-field" style="margin-bottom:6px">Appointment Date</div>
-          <input type="date" class="dc-input" id="appt-date"
-                 min="<?= date('Y-m-d') ?>"
-               max="<?= htmlspecialchars($maxBookDate, ENT_QUOTES, 'UTF-8') ?>"
-                 style="max-width:220px">
+             <input type="text" class="dc-input dc-date-input" id="appt-date"
+               placeholder="YYYY-MM-DD"
+               inputmode="numeric"
+               autocomplete="off"
+               maxlength="10"
+               style="max-width:220px">
         </div>
         <div class="dc-live" id="slot-live" style="display:none">
           <div class="dc-live__dot"></div> Live
@@ -439,65 +441,49 @@ function updateSelDocCard() {
   card.style.display = '';
 }
 
-// -- Date Input Fix -----------------------------------------------------------
-// WHY: <input type="date"> has a known browser quirk where typing
-// a month like "10", "11", or "12" causes the 'change' event to
-// fire after just the first digit ("1"), jumping focus to the day
-// field before the user can finish. This means the full month
-// value is never captured by the 'change' event alone.
-//
-// FIX: We listen to both 'change' AND 'blur'. The 'blur' event
-// fires only when the user leaves the field entirely - by then
-// the full date (including double-digit months) is committed.
-// We also keep the year sanity check (year < 2020) to silently
-// ignore transient "0000" states while the year is still being
-// typed, preventing false "out of range" warnings mid-entry.
-function handleDateInput() {
-  const selectedDate = this.value;
+function setWaitingForDateMessage() {
+  document.getElementById('slots-container').innerHTML =
+    '<p class="dc-body" style="color:var(--dc-text-3)">Select a date above to see available slots.</p>';
+}
 
-  // Not fully entered yet — do nothing, wait
-  if (!selectedDate || selectedDate.length < 10 || !/^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) {
-    return;
-  }
-
-  // Year sanity check — ignore obviously incomplete years
-  const year = parseInt(selectedDate.slice(0, 4));
-  if (year < 2020 || year > 2100) {
-    return;
-  }
-
-  const nativeDate = new Date(selectedDate + 'T00:00:00');
-  if (isNaN(nativeDate.getTime())) {
-    return;
-  }
-
-  if (!isWithinBookingWindow(selectedDate)) {
+const apptDateInput = document.getElementById('appt-date');
+DCDateInput.mount(apptDateInput, {
+  min: BOOK_MIN_DATE,
+  max: BOOK_MAX_DATE,
+  onEmpty() {
     booking.date = null;
     booking.time = null;
     document.getElementById('btn-next-2').disabled = true;
-    document.getElementById('slots-container').innerHTML =
-      '<p class="dc-body" style="color:var(--dc-text-3)">Please choose a date between today and the next 180 days.</p>';
-    return;
-  }
+    setWaitingForDateMessage();
+  },
+  onInvalid(value, reason, strict) {
+    booking.date = null;
+    booking.time = null;
+    document.getElementById('btn-next-2').disabled = true;
 
-  booking.date = selectedDate;
-  booking.time = null;
-  document.getElementById('btn-next-2').disabled = true;
-  loadSlots();
-  restartSlotPoller();
-}
+    if (!strict) return;
 
-function handleDateChange() {
-  // Some browsers emit early change events while segmented date typing is still active.
-  // If the control is still focused, defer validation to blur.
-  if (document.activeElement === this) {
-    return;
-  }
-  handleDateInput.call(this);
-}
+    if (reason === 'format') {
+      Toast.warning('Please enter the appointment date as YYYY-MM-DD.');
+      setWaitingForDateMessage();
+      return;
+    }
 
-document.getElementById('appt-date').addEventListener('change', handleDateChange);
-document.getElementById('appt-date').addEventListener('blur', handleDateInput);
+    if (reason === 'range') {
+      Toast.warning('Please choose a date between today and the next 180 days.');
+      document.getElementById('slots-container').innerHTML =
+        '<p class="dc-body" style="color:var(--dc-text-3)">Please choose a date between today and the next 180 days.</p>';
+    }
+  },
+  onValid(value) {
+    if (booking.date === value) return;
+    booking.date = value;
+    booking.time = null;
+    document.getElementById('btn-next-2').disabled = true;
+    loadSlots();
+    restartSlotPoller();
+  },
+});
 
 async function loadSlots() {
   if (!booking.doctorId || !booking.date) return;
