@@ -441,27 +441,20 @@ function updateSelDocCard() {
 
 document.getElementById('appt-date').addEventListener('change', function() {
   const selectedDate = this.value;
-  const nativeDate = this.valueAsDate;
 
-  if (!selectedDate) {
-    booking.date = null;
-    booking.time = null;
-    document.getElementById('btn-next-2').disabled = true;
-    document.getElementById('slots-container').innerHTML =
-      '<p class="dc-body" style="color:var(--dc-text-3)">Select a date above to see available slots.</p>';
-    restartSlotPoller();
+  // Not fully entered yet — do nothing, wait
+  if (!selectedDate || selectedDate.length < 10 || !/^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) {
     return;
   }
 
-  // Some browsers produce transient values (e.g., year 0000) while editing.
-  // Only validate when the control reports a fully valid native date object.
-  if (!nativeDate || selectedDate.length < 10) {
-    booking.date = null;
-    booking.time = null;
-    document.getElementById('btn-next-2').disabled = true;
-    document.getElementById('slots-container').innerHTML =
-      '<p class="dc-body" style="color:var(--dc-text-3)">Finish entering the full date to load slots.</p>';
-    restartSlotPoller();
+  // Year sanity check — ignore obviously incomplete years
+  const year = parseInt(selectedDate.slice(0, 4));
+  if (year < 2020 || year > 2100) {
+    return;
+  }
+
+  const nativeDate = new Date(selectedDate + 'T00:00:00');
+  if (isNaN(nativeDate.getTime())) {
     return;
   }
 
@@ -470,13 +463,11 @@ document.getElementById('appt-date').addEventListener('change', function() {
     booking.time = null;
     document.getElementById('btn-next-2').disabled = true;
     document.getElementById('slots-container').innerHTML =
-      '<p class="dc-body" style="color:var(--dc-text-3)">Please choose a valid date between today and the next 180 days.</p>';
-    // Keep the entered value so users can correct only the invalid part.
-    restartSlotPoller();
+      '<p class="dc-body" style="color:var(--dc-text-3)">Please choose a date between today and the next 180 days.</p>';
     return;
   }
 
-  booking.date = this.value;
+  booking.date = selectedDate;
   booking.time = null;
   document.getElementById('btn-next-2').disabled = true;
   loadSlots();
