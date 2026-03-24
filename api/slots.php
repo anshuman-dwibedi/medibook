@@ -33,7 +33,23 @@ switch ($method) {
         if (!$date) Api::error('date required', 400);
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) Api::error('Invalid date format', 400);
 
-        $dateObj    = new DateTime($date);
+        $dateObj = DateTime::createFromFormat('Y-m-d', $date);
+        $dateErrors = DateTime::getLastErrors();
+        if (
+            !$dateObj
+            || ($dateErrors && (($dateErrors['warning_count'] ?? 0) > 0 || ($dateErrors['error_count'] ?? 0) > 0))
+            || $dateObj->format('Y-m-d') !== $date
+        ) {
+            Api::error('Invalid appointment date', 400);
+        }
+
+        $today = new DateTimeImmutable('today');
+        $maxDate = $today->modify('+180 days');
+        $requestedDate = DateTimeImmutable::createFromFormat('Y-m-d', $date);
+        if (!$requestedDate || $requestedDate < $today || $requestedDate > $maxDate) {
+            Api::error('Date out of booking range', 400);
+        }
+
         $dayOfWeek  = (int)$dateObj->format('w'); // 0=Sun … 6=Sat
 
         // All active slots for this doctor on this weekday

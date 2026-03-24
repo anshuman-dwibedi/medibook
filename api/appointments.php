@@ -82,8 +82,27 @@ switch ($method) {
         $apptTime  = $body['appointment_time'];
         $email     = strtolower(trim($body['patient_email']));
 
-        // Validate date is not in the past
-        if ($apptDate < date('Y-m-d')) Api::error('Cannot book appointments in the past', 400);
+        // Validate date format and booking window
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $apptDate)) {
+            Api::error('Invalid appointment date format', 400);
+        }
+
+        $dateObj = DateTime::createFromFormat('Y-m-d', $apptDate);
+        $dateErrors = DateTime::getLastErrors();
+        if (
+            !$dateObj
+            || ($dateErrors && (($dateErrors['warning_count'] ?? 0) > 0 || ($dateErrors['error_count'] ?? 0) > 0))
+            || $dateObj->format('Y-m-d') !== $apptDate
+        ) {
+            Api::error('Invalid appointment date', 400);
+        }
+
+        $today = new DateTimeImmutable('today');
+        $maxDate = $today->modify('+180 days');
+        $requestedDate = DateTimeImmutable::createFromFormat('Y-m-d', $apptDate);
+        if (!$requestedDate || $requestedDate < $today || $requestedDate > $maxDate) {
+            Api::error('Appointment date must be within the next 180 days', 400);
+        }
 
         // Get slot
         $dateObj   = new DateTime($apptDate);

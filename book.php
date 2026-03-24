@@ -6,6 +6,8 @@ $deptId  = isset($_GET['dept']) ? (int)$_GET['dept'] : null;
 $depts   = $db->fetchAll("SELECT id, name FROM departments ORDER BY name");
 // Compute API base path so JS fetch calls work regardless of server subdirectory
 $apiBase = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/book.php'), '/') . '/api';
+$minBookDate = date('Y-m-d');
+$maxBookDate = date('Y-m-d', strtotime('+180 days'));
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -195,6 +197,7 @@ $apiBase = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/book.php'), '/') . '/api';
           <div class="dc-label-field" style="margin-bottom:6px">Appointment Date</div>
           <input type="date" class="dc-input" id="appt-date"
                  min="<?= date('Y-m-d') ?>"
+               max="<?= htmlspecialchars($maxBookDate, ENT_QUOTES, 'UTF-8') ?>"
                  style="max-width:220px">
         </div>
         <div class="dc-live" id="slot-live" style="display:none">
@@ -290,11 +293,28 @@ $apiBase = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/book.php'), '/') . '/api';
 <script src="../../core/utils/helpers.js"></script>
 <script>
 const API = '<?= $apiBase ?>';
+const BOOK_MIN_DATE = '<?= $minBookDate ?>';
+const BOOK_MAX_DATE = '<?= $maxBookDate ?>';
 
 const booking = { doctorId:null, doctorName:null, doctorFee:null, doctorPhoto:null, doctorSpec:null, date:null, time:null };
 let allDoctors   = [];
 let currentSlots = [];
 let slotPoller   = null;
+
+function parseDateOnly(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value || '')) return null;
+  const d = new Date(value + 'T00:00:00Z');
+  if (Number.isNaN(d.getTime())) return null;
+  return d;
+}
+
+function isWithinBookingWindow(value) {
+  const selected = parseDateOnly(value);
+  const min = parseDateOnly(BOOK_MIN_DATE);
+  const max = parseDateOnly(BOOK_MAX_DATE);
+  if (!selected || !min || !max) return false;
+  return selected >= min && selected <= max;
+}
 
 // ── Step Navigation ──────────────────────────────────────────
 function goStep(n) {
@@ -420,6 +440,19 @@ function updateSelDocCard() {
 }
 
 document.getElementById('appt-date').addEventListener('change', function() {
+  const selectedDate = this.value;
+  if (!isWithinBookingWindow(selectedDate)) {
+    booking.date = null;
+    booking.time = null;
+    this.value = '';
+    document.getElementById('btn-next-2').disabled = true;
+    document.getElementById('slots-container').innerHTML =
+      '<p class="dc-body" style="color:var(--dc-text-3)">Please choose a valid date between today and the next 180 days.</p>';
+    Toast.warning('Please choose a valid appointment date.');
+    restartSlotPoller();
+    return;
+  }
+
   booking.date = this.value;
   booking.time = null;
   document.getElementById('btn-next-2').disabled = true;
@@ -429,6 +462,10 @@ document.getElementById('appt-date').addEventListener('change', function() {
 
 async function loadSlots() {
   if (!booking.doctorId || !booking.date) return;
+  if (!isWithinBookingWindow(booking.date)) {
+    Toast.warning('Selected date is outside booking range.');
+    return;
+  }
   document.getElementById('slot-live').style.display = '';
   document.getElementById('slots-container').innerHTML =
     '<p class="dc-body" style="color:var(--dc-text-3)"><i class="dc-icon dc-icon-refresh dc-icon-sm" style="vertical-align:middle;margin-right:6px;color:var(--dc-accent-2)"></i>Loading slots…</p>';
@@ -528,6 +565,10 @@ async function confirmBooking() {
   }
   if (!booking.doctorId || !booking.date || !booking.time) {
     showError('Booking details missing — please go back and complete all steps.');
+    return;
+  }
+  if (!isWithinBookingWindow(booking.date)) {
+    showError('Please select a valid appointment date.');
     return;
   }
 
