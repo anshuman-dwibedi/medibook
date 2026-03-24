@@ -487,7 +487,16 @@ function handleDateInput() {
   restartSlotPoller();
 }
 
-document.getElementById('appt-date').addEventListener('change', handleDateInput);
+function handleDateChange() {
+  // Some browsers emit early change events while segmented date typing is still active.
+  // If the control is still focused, defer validation to blur.
+  if (document.activeElement === this) {
+    return;
+  }
+  handleDateInput.call(this);
+}
+
+document.getElementById('appt-date').addEventListener('change', handleDateChange);
 document.getElementById('appt-date').addEventListener('blur', handleDateInput);
 
 async function loadSlots() {
