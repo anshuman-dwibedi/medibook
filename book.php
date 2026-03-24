@@ -439,7 +439,20 @@ function updateSelDocCard() {
   card.style.display = '';
 }
 
-document.getElementById('appt-date').addEventListener('change', function() {
+// -- Date Input Fix -----------------------------------------------------------
+// WHY: <input type="date"> has a known browser quirk where typing
+// a month like "10", "11", or "12" causes the 'change' event to
+// fire after just the first digit ("1"), jumping focus to the day
+// field before the user can finish. This means the full month
+// value is never captured by the 'change' event alone.
+//
+// FIX: We listen to both 'change' AND 'blur'. The 'blur' event
+// fires only when the user leaves the field entirely - by then
+// the full date (including double-digit months) is committed.
+// We also keep the year sanity check (year < 2020) to silently
+// ignore transient "0000" states while the year is still being
+// typed, preventing false "out of range" warnings mid-entry.
+function handleDateInput() {
   const selectedDate = this.value;
 
   // Not fully entered yet — do nothing, wait
@@ -472,7 +485,10 @@ document.getElementById('appt-date').addEventListener('change', function() {
   document.getElementById('btn-next-2').disabled = true;
   loadSlots();
   restartSlotPoller();
-});
+}
+
+document.getElementById('appt-date').addEventListener('change', handleDateInput);
+document.getElementById('appt-date').addEventListener('blur', handleDateInput);
 
 async function loadSlots() {
   if (!booking.doctorId || !booking.date) return;
