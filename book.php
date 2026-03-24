@@ -196,7 +196,7 @@ $maxBookDate = date('Y-m-d', strtotime('+180 days'));
         <div>
           <div class="dc-label-field" style="margin-bottom:6px">Appointment Date</div>
              <input type="text" class="dc-input dc-date-input" id="appt-date"
-               placeholder="YYYY-MM-DD"
+               placeholder="MM/DD/YYYY"
                inputmode="numeric"
                autocomplete="off"
                maxlength="10"
@@ -450,6 +450,7 @@ const apptDateInput = document.getElementById('appt-date');
 DCDateInput.mount(apptDateInput, {
   min: BOOK_MIN_DATE,
   max: BOOK_MAX_DATE,
+  displayFormat: 'mdy',
   onEmpty() {
     booking.date = null;
     booking.time = null;
@@ -464,7 +465,7 @@ DCDateInput.mount(apptDateInput, {
     if (!strict) return;
 
     if (reason === 'format') {
-      Toast.warning('Please enter the appointment date as YYYY-MM-DD.');
+      Toast.warning('Please enter a valid appointment date.');
       setWaitingForDateMessage();
       return;
     }
