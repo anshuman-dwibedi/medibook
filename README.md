@@ -4,6 +4,10 @@ A complete clinic appointment management system with doctor profiles, real-time 
 
 Built on the DevCore Shared Library with secure patient data handling and staff workflows.
 
+## Live Deployment
+
+- Production Website: https://medibook.42web.io
+
 **Part of the DevCore Suite** — a collection of business-ready web applications sharing a common core library.
 
 ---
